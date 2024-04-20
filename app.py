@@ -62,6 +62,8 @@ def generate_search_message(message: str) -> str:
         Bot: "Yes"
         4. User : "Some Videos on ML"
         Bot : "Yes"
+        5. User : Search for Hyperledger 
+        Bot : "Yes"
         Examples for 'No' Response:
         1. User: "Summarize this video about machine learning."
         Bot: "No"
@@ -75,36 +77,36 @@ def generate_search_message(message: str) -> str:
         Don't forget, you're a YouTube chatbot focused on searching and summarizing YouTube videos. Only respond with 'Yes' or 'No'."""},
     ])
 
-def chatbot():
-    messages = [
+def chatbot() -> None:
+    messages: List[Dict[str, Any]] = [
         {"role": "system", "content": "You are a helpful Youtube search and summarize chatbot. You have to only and only answer on the youtube related questions. Please it is very important to not divert."},
     ]
 
     while True:
-        message = input("User: ")
+        message: str = input("User: ")
 
         if contains_valid_youtube_id(message):
-            video_details = contains_valid_youtube_id(message)
-            messages.append({"role": "user", "content": str(video_details)})
-            
-            chat_message = call_language_model([
-                {"role": "system", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate."},
-                {"role": "user", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate"}
-            ])
-            print(chat_message)
-            messages.append({"role": "user", "content": chat_message})
+            video_details: Union[Dict[str, Any], bool] = contains_valid_youtube_id(message)
+            if isinstance(video_details, dict):
+                messages.append({"role": "user", "content": str(video_details)})
+                chat_message: str = call_language_model([
+                    {"role": "system", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate."},
+                    {"role": "user", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate"}
+                ])
+                print(chat_message)
+                messages.append({"role": "user", "content": chat_message})
             continue
 
         if message.lower() == "quit":
             break
             
-        search_message = generate_search_message(message)
+        search_message: str = generate_search_message(message)
 
         if search_message.lower().startswith("yes"):
-            query = message.strip()
-            videos = search_videos(query)
+            query: str = message.strip()
+            videos: Optional[List[Dict[str, Any]]] = search_videos(query)
             if videos:
-                search_results = "\n".join([f"{i+1}. {video['snippet']['title']}: https://www.youtube.com/watch?v={video['id']['videoId']}" for i, video in enumerate(videos)])
+                search_results: str = "\n".join([f"{i+1}. {video['snippet']['title']}: https://www.youtube.com/watch?v={video['id']['videoId']}" for i, video in enumerate(videos)])
                 print("Search Results:")
                 print(search_results)
                 messages.append({"role": "user", "content": search_results})
@@ -114,15 +116,15 @@ def chatbot():
 
         messages.append({"role": "user", "content": message})
 
-        chat_message = call_language_model(messages)
+        chat_message: str = call_language_model(messages)
         print(f"Bot: {chat_message}")
         messages.append({"role": "assistant", "content": chat_message})
 
-def evaluate_search_message(message):
+def evaluate_search_message(message: str) -> str:
     return generate_search_message(message)
 
-def evaluate_chatbot():
-    test_cases = [
+def evaluate_chatbot() -> None:
+    test_cases: List[Dict[str, str]] = [
         {
             "message": "Can you recommend some videos about cooking?",
             "expected_output": "Yes"
@@ -149,13 +151,13 @@ def evaluate_chatbot():
         }
     ]
     
-    total_tests = len(test_cases)
-    passed_tests = 0
+    total_tests: int = len(test_cases)
+    passed_tests: int = 0
     
     for test_case in test_cases:
         print("Test Case:", test_case["message"])
-        actual_output = evaluate_search_message(test_case["message"])
-        expected_output = test_case["expected_output"]
+        actual_output: str = evaluate_search_message(test_case["message"])
+        expected_output: str = test_case["expected_output"]
         print("Expected Output:", expected_output)
         print("Actual Output:", actual_output)
         if actual_output.lower().strip() == expected_output.lower().strip():
@@ -165,7 +167,7 @@ def evaluate_chatbot():
             print("Test Failed")
         print("="*50)
     
-    accuracy = (passed_tests / total_tests) * 100
+    accuracy: float = (passed_tests / total_tests) * 100
     print(f"Accuracy: {accuracy}%")
 
 if __name__ == "__main__":

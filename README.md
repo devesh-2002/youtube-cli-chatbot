@@ -45,7 +45,7 @@ pip install -r requirements.txt
 
 2. **Parsing YouTube URLs:** The regex pattern used to validate YouTube video URLs may not cover all possible variations of valid URLs. This could result in false negatives or false positives when validating user input.
 
-3. **Search Query Ambiguity:** Since the chatbot treats the entire message following the search keywords as the search query, it may misinterpret complex or ambiguous queries. This could lead to irrelevant search results or misunderstandings of user intent
+3. **Search Query Ambiguity:** Since the chatbot treats the entire message following the search keywords as the search query, it may misinterpret complex or ambiguous queries. This could lead to irrelevant search results or misunderstandings of user intent. It may sometimes search for the query, even when it is not supposed to search, and vice-versa.
 
 4. **API Rate Limits and Quotas:** The chatbot relies on the YouTube Data API to fetch video details and search results. There's a risk of hitting API rate limits or quotas, especially if the chatbot experiences heavy usage or if the API usage is not properly managed.
 
