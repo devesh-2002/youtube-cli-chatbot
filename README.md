@@ -14,6 +14,7 @@ OPENAI_API_KEY =
 virtualenv env
 ```
 5. Activate the environment :
+
 On Bash
 ```
 source env/Scripts/activate
