@@ -37,10 +37,47 @@ def search_videos(query: str, max_results: int = 5) -> Optional[List[Dict[str, A
     else:
         return None
 
-    
+def call_language_model(messages: List[Dict[str, Any]], model: str = "gpt-3.5-turbo") -> str:
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages
+    )
+    return response.choices[0].message.content
+
+def generate_search_message(message: str) -> str:
+    return call_language_model([
+        {"role": "system", "content": "You are a specialized YouTube Summarize and Search assistant. You can have access to a particular video. Your primary role is to help users find relevant videos on YouTube. Your responses should be concise and directly address the user's query. Remember, you're here to assist with summarizing videos and searching for new ones. Don't go off-topic."},
+        {"role": "user", "content": f"""Based on the {message}, determine if the user's intent is to search for a video. Respond with 'Yes' only when you are certain the user wants to search for a new video. Do not unnecessarily respond 'Yes' even if the user asks questions regarding the previous video.
+        
+        Say Yes only if the user really wants to search for a new video. Here are some examples:
+        
+        Examples for 'Yes' Response:
+        1. User: "Can you recommend some videos about cooking?"
+        Bot: "Yes"
+        
+        2. User: "I'm looking for tutorials on digital marketing."
+        Bot: "Yes"
+        
+        3. User: "Do you have any suggestions for workout routines?"
+        Bot: "Yes"
+        4. User : "Some Videos on ML"
+        Bot : "Yes"
+        Examples for 'No' Response:
+        1. User: "Summarize this video about machine learning."
+        Bot: "No"
+        
+        2. User: "What's the length of the video 'How to bake a cake'?"
+        Bot: "No"
+        
+        3. User: "How many views does the video 'Python tutorial' have?"
+        Bot: "No"
+        
+        Don't forget, you're a YouTube chatbot focused on searching and summarizing YouTube videos. Only respond with 'Yes' or 'No'."""},
+    ])
+
 def chatbot():
     messages = [
-        {"role": "system", "content": "You are a helpful Youtube chatbot. You have to only and only answer on the youtube related questions. Please it is very important to not divert."},
+        {"role": "system", "content": "You are a helpful Youtube search and summarize chatbot. You have to only and only answer on the youtube related questions. Please it is very important to not divert."},
     ]
 
     while True:
@@ -50,43 +87,88 @@ def chatbot():
             video_details = contains_valid_youtube_id(message)
             messages.append({"role": "user", "content": str(video_details)})
             
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate."},
-                    {"role": "user", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate"}
-                ]
-            )
-            chat_message = response.choices[0].message.content
+            chat_message = call_language_model([
+                {"role": "system", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate."},
+                {"role": "user", "content": f"Give answer based on the Message : {message} and Video Details : {video_details}. Be to the point and do not exaggerate"}
+            ])
             print(chat_message)
             messages.append({"role": "user", "content": chat_message})
             continue
 
         if message.lower() == "quit":
             break
+            
+        search_message = generate_search_message(message)
 
-        if message.lower().startswith("search"):
-            query = message[7:].strip()
+        if search_message.lower().startswith("yes"):
+            query = message.strip()
             videos = search_videos(query)
             if videos:
                 search_results = "\n".join([f"{i+1}. {video['snippet']['title']}: https://www.youtube.com/watch?v={video['id']['videoId']}" for i, video in enumerate(videos)])
                 print("Search Results:")
                 print(search_results)
+                messages.append({"role": "user", "content": search_results})
             else:
                 print("No search results found.")
             continue
 
         messages.append({"role": "user", "content": message})
 
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages
-        )
-
-        chat_message = response.choices[0].message.content
+        chat_message = call_language_model(messages)
         print(f"Bot: {chat_message}")
         messages.append({"role": "assistant", "content": chat_message})
+
+def evaluate_search_message(message):
+    return generate_search_message(message)
+
+def evaluate_chatbot():
+    test_cases = [
+        {
+            "message": "Can you recommend some videos about cooking?",
+            "expected_output": "Yes"
+        },
+        {
+            "message": "Summarize this video : https://www.youtube.com/watch?v=O71vKZ6WBf8",
+            "expected_output": "No"
+        },
+        {
+            "message": "Do you have any suggestions for workout routines?",
+            "expected_output": "Yes"
+        },
+        {
+            "message": "Some Videos on ML",
+            "expected_output": "Yes"
+        },
+        {
+            "message": "What's the length of the video 'How to bake a cake'?",
+            "expected_output": "No"
+        },
+        {
+            "message": "How many views does the video 'Python tutorial' have?",
+            "expected_output": "No"
+        }
+    ]
+    
+    total_tests = len(test_cases)
+    passed_tests = 0
+    
+    for test_case in test_cases:
+        print("Test Case:", test_case["message"])
+        actual_output = evaluate_search_message(test_case["message"])
+        expected_output = test_case["expected_output"]
+        print("Expected Output:", expected_output)
+        print("Actual Output:", actual_output)
+        if actual_output.lower().strip() == expected_output.lower().strip():
+            print("Test Passed")
+            passed_tests += 1
+        else:
+            print("Test Failed")
+        print("="*50)
+    
+    accuracy = (passed_tests / total_tests) * 100
+    print(f"Accuracy: {accuracy}%")
 
 if __name__ == "__main__":
     print("Start chatting with the bot (type 'quit' to stop)!")
     chatbot()
+    # evaluate_chatbot()
